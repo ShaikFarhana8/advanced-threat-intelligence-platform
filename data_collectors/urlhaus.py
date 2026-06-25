@@ -2,9 +2,7 @@ import requests
 from pymongo import MongoClient
 
 def collect_urlhaus():
-
     print("Fetching URLhaus Feed...")
-
     client = MongoClient("mongodb://localhost:27017/")
     db = client["threat_intelligence"]
     collection = db["threat_indicators"]
