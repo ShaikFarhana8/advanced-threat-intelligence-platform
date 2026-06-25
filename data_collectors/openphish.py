@@ -1,30 +1,24 @@
 import requests
 from pymongo import MongoClient
 
-print("Fetching OpenPhish Feed...")
+def collect_openphish():
 
-# Connect to MongoDB
-client = MongoClient("mongodb://localhost:27017/")
-db = client["threat_intelligence"]
-collection = db["threat_indicators"]
+    print("Fetching OpenPhish Feed...")
 
-try:
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["threat_intelligence"]
+    collection = db["threat_indicators"]
+
     response = requests.get(
         "https://openphish.com/feed.txt",
         timeout=10
     )
 
-    print("Status Code:", response.status_code)
-
     if response.status_code == 200:
-
         urls = response.text.splitlines()
-
         inserted = 0
 
-        for url in urls:
-
-            # Check duplicates
+        for url in urls[:100]:
             existing = collection.find_one(
                 {"indicator": url}
             )
@@ -40,10 +34,7 @@ try:
 
                 inserted += 1
 
-        print(f"Inserted {inserted} new records into MongoDB")
+        print(f"OpenPhish: {inserted} records inserted")
+        return inserted
 
-    else:
-        print("Request Failed")
-
-except Exception as e:
-    print("Error:", e)
+    return 0

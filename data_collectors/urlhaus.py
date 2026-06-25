@@ -1,38 +1,47 @@
 import requests
 from pymongo import MongoClient
 
-print("Fetching URLhaus Feed...")
+def collect_urlhaus():
 
-client = MongoClient("mongodb://localhost:27017/")
-db = client["threat_intelligence"]
-collection = db["threat_indicators"]
+    print("Fetching URLhaus Feed...")
 
-response = requests.get(
-    "https://urlhaus.abuse.ch/downloads/text/",
-    timeout=20
-)
+    client = MongoClient("mongodb://localhost:27017/")
+    db = client["threat_intelligence"]
+    collection = db["threat_indicators"]
 
-if response.status_code == 200:
+    response = requests.get(
+        "https://urlhaus.abuse.ch/downloads/text/",
+        timeout=20
+    )
 
-    urls = response.text.splitlines()
+    if response.status_code == 200:
 
-    inserted = 0
+        urls = response.text.splitlines()
 
-    for item in urls[:100]:   # Only first 100 records
+        inserted = 0
 
-        if item.startswith("#") or item.strip() == "":
-            continue
+        for item in urls[:100]:
 
-        collection.insert_one({
-            "indicator": item,
-            "type": "URL",
-            "source": "URLhaus",
-            "risk_score": 95
-        })
+            if item.startswith("#") or item.strip() == "":
+                continue
 
-        inserted += 1
+            existing = collection.find_one(
+                {"indicator": item}
+            )
 
-    print(f"Inserted {inserted} URLhaus records")
+            if not existing:
 
-else:
-    print("Failed:", response.status_code)
+                collection.insert_one({
+                    "indicator": item,
+                    "type": "URL",
+                    "source": "URLhaus",
+                    "risk_score": 95
+                })
+
+                inserted += 1
+
+        print(f"URLhaus: {inserted} records inserted")
+
+        return inserted
+
+    return 0
