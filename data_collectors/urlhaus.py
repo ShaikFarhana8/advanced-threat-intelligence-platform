@@ -1,45 +1,60 @@
 import requests
 from pymongo import MongoClient
+from utils.normalizer import normalize_indicator
+
 
 def collect_urlhaus():
+
     print("Fetching URLhaus Feed...")
+
     client = MongoClient("mongodb://localhost:27017/")
     db = client["threat_intelligence"]
     collection = db["threat_indicators"]
 
-    response = requests.get(
-        "https://urlhaus.abuse.ch/downloads/text/",
-        timeout=20
-    )
+    try:
+        response = requests.get(
+            "https://urlhaus.abuse.ch/downloads/text/",
+            timeout=20
+        )
 
-    if response.status_code == 200:
+        if response.status_code == 200:
 
-        urls = response.text.splitlines()
+            urls = response.text.splitlines()
 
-        inserted = 0
+            inserted = 0
 
-        for item in urls[:100]:
+            for item in urls[:100]:
 
-            if item.startswith("#") or item.strip() == "":
-                continue
+                if item.startswith("#") or not item.strip():
+                    continue
 
-            existing = collection.find_one(
-                {"indicator": item}
-            )
+                existing = collection.find_one(
+                    {"indicator": item}
+                )
 
-            if not existing:
+                if not existing:
 
-                collection.insert_one({
-                    "indicator": item,
-                    "type": "URL",
-                    "source": "URLhaus",
-                    "risk_score": 95
-                })
+                    threat = normalize_indicator(
+                        indicator=item,
+                        source="URLhaus"
+                    )
 
-                inserted += 1
+                    collection.insert_one(threat)
 
-        print(f"URLhaus: {inserted} records inserted")
+                    inserted += 1
 
-        return inserted
+            print(f"URLhaus: {inserted} records inserted")
 
-    return 0
+            return inserted
+
+        else:
+            print("Failed to fetch URLhaus feed")
+            return 0
+
+    except Exception as e:
+        print("Error:", e)
+        return 0
+
+
+if __name__ == "__main__":
+    collect_urlhaus()
