@@ -43,5 +43,4 @@ for threat in latest:
         f"{threat['risk_score']} | "
         f"{threat['indicator']}"
     )
-
 print("\nDashboard Generated Successfully.")
